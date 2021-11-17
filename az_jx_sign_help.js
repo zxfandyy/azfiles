@@ -45,7 +45,7 @@ var azmain = process.env.azmain ?? "3";
 let helpcodes = [];
 let helpstart = 0;
 // 失败循环最大次数后切换下一个助力码
-let failend = 8;
+let failend = 3;
 let failstart = 0;
 // CK1随机助力一个内置码,如CK1助力码获取失败则开码的的CK助力作者,其余助力开码的号,目前助力码不变,每次助力1毛多,大约20次满
 const authorCodes = ['4acb74bcbedf46a5b1247a08ab423517','f59db2ee9318cf92568ca73614627fb9','3395e6369704b9060cae98366f393963','805162a879e1a2b0a6ccb5a8b3d25014']
@@ -71,11 +71,12 @@ if ($.isNode()) {
     UA = getUA();
     if (i < azmain) {
         if (i == 0) {
+            console.log(`助力状态: 1-未满 2-已满,签到状态: 1-签到成功 0-签到失败,黑号无法签到和被助力`);
             console.log(`${i} ${$.UserName} 助力作者 ${authorCode}`);
             assistFriendRes = await helpSignhb(authorCode);
         } else {
-            if (helpcodes[0] == '助力已满' || helpcodes[0] == '获取失败') {
-                console.log(`由于第一个CK助力码已满助力或获取失败,${i} ${$.UserName} 助力作者 ${authorCode}`);
+            if (helpcodes[0] == '助力已满或签到失败' || helpcodes[0] == '获取失败') {
+                console.log(`由于第一个CK助力码无效,${i} ${$.UserName} 助力作者 ${authorCode}`);
                 assistFriendRes = await helpSignhb(authorCode);
             } else {
                 console.log(`${i} ${$.UserName} 助力 ${helpcodes[0]}`);
@@ -85,15 +86,19 @@ if ($.isNode()) {
         await $.wait(2000);
         if (assistFriendRes && assistFriendRes.ret == 0) {
             helpstatus = assistFriendRes.smp
+            signstatus = assistFriendRes.todaysign
             leftNeed = assistFriendRes.sharetask.status
-            console.log(`${i} ${$.UserName}***** 开启活动成功 ${helpstatus} ${leftNeed}`);
-            if (leftNeed == 1) helpcodes.push(helpstatus);
-            if (leftNeed == 2) {
-                console.log(`${i} ${$.UserName}***** 助力已满`);
-                helpcodes.push('助力已满');
+            if (leftNeed == 1 && signstatus == 1) {
+                console.log(`${i} ${$.UserName}***** 开启活动成功,助力状态 ${leftNeed},签到状态 ${signstatus}`);
+                helpcodes.push(helpstatus);
+            }
+            if (leftNeed == 2 || signstatus == 0) {
+                console.log(`${i} ${$.UserName}***** 被助力账号助力已满或签到失败,助力状态 ${leftNeed},签到状态 ${signstatus}`);
+                helpcodes.push('助力已满或签到失败');
             }
             continue;
         } else {
+            console.log(`${i} ${$.UserName}***** 开启活动失败`);
             helpcodes.push('获取失败');
             continue;
         }
@@ -104,7 +109,7 @@ if ($.isNode()) {
         break;
     }
     if (i > azmain) {
-        if (helpcodes[helpstart] == '助力已满' || helpcodes[helpstart] == '获取失败') {
+        if (helpcodes[helpstart] == '助力已满或签到失败' || helpcodes[helpstart] == '获取失败') {
             helpstart++;
             i--;
             continue;
